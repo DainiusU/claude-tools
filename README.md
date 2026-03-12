@@ -27,11 +27,8 @@ Features:
 ### Installation
 
 ```bash
-# Clone the repo
-git clone https://github.com/DainiusU/claude-tools.git ~/.claude-tools
-
-# Symlink the plugin into your Claude plugins directory
-ln -s ~/.claude-tools/plugins/deep-review ~/.claude/plugins/deep-review
+/plugin marketplace add DainiusU/claude-tools
+/plugin install deep-review@claude-tool
 ```
 
 ### Usage
