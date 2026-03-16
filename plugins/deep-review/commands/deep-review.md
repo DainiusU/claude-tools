@@ -41,6 +41,8 @@ Gather context from all available sources:
 
 6. **Serena availability**: attempt to call `list_memories`. If it succeeds, set `serena_available: true` and read any returned memories. If it fails, set `serena_available: false`.
 
+7. **Dependency context** (when diff touches imports from internal/pinned packages): For each external or internal package newly imported or used in modified files, check the pinned version in `pyproject.toml`, `requirements.txt`, or `package.json`. Then verify the actual API surface at that version — for git-pinned dependencies, check the tag/commit on GitHub (e.g., `gh api repos/{owner}/{repo}/git/refs/tags/{tag}` and read the relevant source). For PyPI packages, check the installed version. Record the package name, pinned version, and relevant model/class fields that the diff references. This prevents agents from making incorrect assumptions about what fields or methods exist at the pinned version.
+
 ## Step 3 — File Triage
 
 Get the list of changed files from the diff. Classify each file:
@@ -84,6 +86,14 @@ context_package:
     <project conventions/patterns from Serena, or empty>
   is_rereview: true | false
   pr_description: "..."
+  dependency_context: |
+    <for each external/internal package referenced in the diff, include:
+     package name, pinned version, relevant fields/methods at that version.
+     Example:
+       sentinel-core:
+         pinned: v0.9.3 (git tag, commit bd22b08c)
+         DetectionModel fields: [category, value, platform, call_to_action, telegram, tiktok, profile_id]
+     Leave empty if no external dependencies are touched in the diff.>
 ```
 
 ## Step 5 — Dispatch 6 Parallel Sonnet Agents
