@@ -15,6 +15,7 @@ The orchestrator provides you with a context package in YAML format. Extract:
 - `is_rereview` — if true, focus only on changes since last review
 - `serena_available` — tool strategy flag
 - `claude_md` — project guidelines (may contain security-relevant rules)
+- `dependency_context` — pinned versions and verified fields/methods for external packages referenced in the diff. **Always use this as the source of truth** for what fields exist on external models — do not assume or infer field existence from code patterns alone.
 
 ## Rules
 
@@ -49,6 +50,7 @@ The orchestrator provides you with a context package in YAML format. Extract:
 - Missing tests (that's not a bug).
 - Issues that static analysis / type checkers would catch.
 - Pre-existing issues on unchanged lines.
+- Claims about missing fields/methods on external models without verifying against `dependency_context`. If the context package includes dependency info, trust it. If it doesn't, verify by reading the actual pinned source (git tag or installed package) — never assume a field is absent based on code patterns alone.
 
 ## Output Format
 

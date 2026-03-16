@@ -15,7 +15,7 @@ Parse `$ARGUMENTS`:
   - If just a number, detect the current repo with `gh repo view --json nameWithOwner -q .nameWithOwner`.
   - Fetch the diff: `gh pr diff <number>`
   - Fetch PR metadata: `gh pr view <number> --json title,body,headRefName,baseRefName,commits,statusCheckRollup,author`
-  - Fetch existing review comments: `gh api repos/{owner}/{repo}/pulls/{number}/comments`
+  - Fetch existing review comments (both inline and general): `gh api repos/{owner}/{repo}/pulls/{number}/comments` AND `gh api repos/{owner}/{repo}/issues/{number}/comments`
   - Get the full HEAD SHA: `gh pr view <number> --json headRefOid -q .headRefOid`
 - **Local mode** (no argument): use `git diff` for unstaged changes. If no unstaged changes, use `git diff --cached` for staged changes. If neither, tell the user there are no changes to review and exit.
 
@@ -40,6 +40,8 @@ Gather context from all available sources:
 5. **Previous deep-review findings** (PR mode, re-review): if re-review detected, extract findings from the previous deep-review comment body.
 
 6. **Serena availability**: attempt to call `list_memories`. If it succeeds, set `serena_available: true` and read any returned memories. If it fails, set `serena_available: false`.
+
+7. **Dependency context** (when diff touches imports from internal/pinned packages): For each external or internal package newly imported or used in modified files, check the pinned version in `pyproject.toml`, `requirements.txt`, or `package.json`. Then verify the actual API surface at that version — for git-pinned dependencies, check the tag/commit on GitHub (e.g., `gh api repos/{owner}/{repo}/git/refs/tags/{tag}` and read the relevant source). For PyPI packages, check the installed version. Record the package name, pinned version, and relevant model/class fields that the diff references. This prevents agents from making incorrect assumptions about what fields or methods exist at the pinned version.
 
 ## Step 3 — File Triage
 
@@ -71,7 +73,7 @@ context_package:
   claude_md: |
     <concatenated relevant CLAUDE.md contents>
   existing_comments: |
-    <list of already-posted review comments, or empty>
+    <combined list of inline review comments AND general PR comments, or empty>
   file_triage:
     path/to/file.py: deep
     config.json: skim
@@ -84,6 +86,14 @@ context_package:
     <project conventions/patterns from Serena, or empty>
   is_rereview: true | false
   pr_description: "..."
+  dependency_context: |
+    <for each external/internal package referenced in the diff, include:
+     package name, pinned version, relevant fields/methods at that version.
+     Example:
+       sentinel-core:
+         pinned: v0.9.3 (git tag, commit bd22b08c)
+         DetectionModel fields: [category, value, platform, call_to_action, telegram, tiktok, profile_id]
+     Leave empty if no external dependencies are touched in the diff.>
 ```
 
 ## Step 5 — Dispatch 6 Parallel Sonnet Agents
@@ -135,7 +145,7 @@ For each remaining finding, assign a final confidence score (0-100) considering:
 Remove findings with final confidence below 80.
 
 ### 6e. Dedup Against Existing Comments
-Compare remaining findings against `existing_comments` from the PR. If a finding describes the same issue as an existing comment, remove it.
+Compare remaining findings against `existing_comments` from the PR — this includes both inline review comments and general PR comments (from other tools, bots, or reviewers). If a finding describes the same issue as an existing comment, remove it. Match on semantic similarity (same file + same concern), not exact text.
 
 ### 6f. Re-review Reconciliation (if re-review)
 Compare against `previous_findings`:
