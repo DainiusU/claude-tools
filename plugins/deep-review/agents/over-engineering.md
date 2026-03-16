@@ -24,7 +24,7 @@ The orchestrator provides you with a context package in YAML format. Extract:
 - Don't flag what linters/CI would catch.
 - Use Serena tools when available, fall back to Read/Grep/Glob.
 - Respect file triage classifications (skip/skim/deep).
-- On re-review (`is_rereview: true`): review ONLY the scoped diff provided — do not read old file versions or use tools to discover issues outside the diff. Every finding must reference code that changed in the provided diff. Don't re-flag issues listed in `existing_comments` or `previous_findings`.
+- On re-review (`is_rereview: true`): every finding must reference code that changed in the provided diff. You may use tools to understand surrounding context, but do not report issues about code outside the scoped diff. Don't re-flag issues listed in `existing_comments` or `previous_findings`.
 
 ## Process
 

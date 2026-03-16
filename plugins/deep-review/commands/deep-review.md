@@ -88,7 +88,7 @@ context_package:
     <project conventions/patterns from Serena, or empty>
   is_rereview: true | false
   re_review_scope: |
-    <for re-reviews only: "from_sha: <last_review_sha>, to_sha: <HEAD_sha>". Empty for fresh reviews.>
+    <for re-reviews only: "from_sha: <from_sha>, to_sha: <to_sha>". Empty for fresh reviews.>
   pr_description: "..."
   dependency_context: |
     <for each external/internal package referenced in the diff, include:
@@ -160,13 +160,13 @@ For each remaining finding, assign a final confidence score (0-100) considering:
 ### 6d. Filter
 Remove findings with final confidence below 80.
 
-### 6d-bis. Re-review Scope Validation (if re-review)
-For each remaining finding, verify that the flagged code actually exists in the scoped diff (`last_review_sha..HEAD`). Discard any finding that describes code from before the review range — these are false positives from agents that read stale file versions.
+### 6e. Re-review Scope Validation (if re-review)
+For each remaining finding, verify that the flagged code actually exists in the scoped diff (`from_sha..to_sha`). Discard any finding that describes code from before the review range — these are false positives from agents that read stale file versions.
 
-### 6e. Dedup Against Existing Comments
+### 6f. Dedup Against Existing Comments
 Compare remaining findings against `existing_comments` from the PR — this includes both inline review comments and general PR comments (from other tools, bots, or reviewers). If a finding describes the same issue as an existing comment, remove it. Match on semantic similarity (same file + same concern), not exact text.
 
-### 6f. Re-review Reconciliation (if re-review)
+### 6g. Re-review Reconciliation (if re-review)
 Compare against `previous_findings`:
 - Mark previously flagged issues as: **resolved** (no longer present in diff), **still present** (same code, same issue), or **partially addressed** (changed but not fully fixed).
 - For PR mode: auto-resolve GitHub review threads for confirmed-resolved issues using the GraphQL mutation (see Step 7). Only resolve threads where: (a) the first comment's `author.login` matches the current user's login (fetch with `gh api /user -q .login`), and (b) the comment body contains `**[` (the deep-review category tag format).
