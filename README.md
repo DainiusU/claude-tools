@@ -28,7 +28,7 @@ Features:
 
 ```bash
 /plugin marketplace add DainiusU/claude-tools
-/plugin install deep-review@claude-tool
+/plugin install deep-review@claude-tools
 ```
 
 ### Usage
