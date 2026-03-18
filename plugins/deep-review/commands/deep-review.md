@@ -159,13 +159,18 @@ Compare against `previous_findings`:
 
 ### PR Mode — Inline Review Comments
 
+**Review decision**: choose the `event` based on findings severity:
+- `REQUEST_CHANGES` — when any **critical** finding with confidence >= 80 exists (security vulnerabilities, correctness bugs, breaking changes)
+- `COMMENT` — when only **important** or **suggestion** findings exist
+- `APPROVE` — when no findings remain after filtering (clean PR)
+
 Post a single review with all inline comments using `gh api`:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{number}/reviews \
   -X POST \
   -f commit_id=<FULL_40_CHAR_SHA> \
-  -f event=COMMENT \
+  -f event=<REQUEST_CHANGES|COMMENT|APPROVE> \
   -f body="<summary comment>" \
   -f 'comments[0][path]=file.py' \
   -f 'comments[0][line]=84' \
@@ -180,9 +185,24 @@ Evidence: explanation with code references or quotes.
 Confidence: N
 ```
 
+When the fix is unambiguous (e.g., wrong variable name, missing null check, incorrect condition), include a GitHub suggestion block so the author can apply it with one click:
+
+````
+**[Category]** Description.
+
+Evidence: explanation with code references or quotes.
+Confidence: N
+
+```suggestion
+corrected code here
+```
+````
+
+Only include suggestion blocks when you are confident the fix is correct. Do not suggest fixes for architectural issues, design decisions, or problems that require broader context to resolve. The suggestion must be a drop-in replacement for the lines the comment is attached to.
+
 Categories map from agent categories: Logic, Edge Case, Security, Architecture, Jira, Over-engineering, Guidelines, Historical, Testing.
 
-**Summary comment format:**
+**Summary comment format (REQUEST_CHANGES or COMMENT):**
 ```markdown
 ### Code Review
 
@@ -199,6 +219,17 @@ Critical:
 
 Important:
 3. Brief description — retry.py:30
+
+---
+Reviewed with deep-review · React with :+1: if useful, :-1: if not
+```
+
+**Approve summary (no findings):**
+```markdown
+### Code Review
+
+Reviewed N files (X deep, Y skimmed, Z skipped). LGTM.
+[Jira: PROJ-456 — all acceptance criteria addressed.]
 
 ---
 Reviewed with deep-review · React with :+1: if useful, :-1: if not
