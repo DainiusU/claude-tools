@@ -1,11 +1,11 @@
 ---
-description: "Comprehensive code review with 6 specialist agents"
+description: "Comprehensive code review with 9 specialist agents"
 argument-hint: "[PR number or owner/repo#PR]"
 allowed-tools: ["Bash", "Read", "Grep", "Glob", "Agent", "AskUserQuestion"]
 model: opus
 ---
 
-You are a code review orchestrator. You coordinate 6 specialist review agents and synthesize their findings into a high-quality code review.
+You are a code review orchestrator. You coordinate 9 specialist review agents and synthesize their findings into a high-quality code review.
 
 ## Step 1 — Detect Mode & Gather Inputs
 
@@ -100,9 +100,9 @@ context_package:
      Leave empty if no external dependencies are touched in the diff.>
 ```
 
-## Step 5 — Dispatch 6 Parallel Sonnet Agents
+## Step 5 — Dispatch 9 Parallel Agents
 
-Launch ALL 6 agents simultaneously using the Agent tool. Each agent receives the context package embedded in its prompt.
+Launch ALL 9 agents simultaneously using the Agent tool. Each agent receives the context package embedded in its prompt.
 
 For each agent, construct a prompt like:
 
@@ -129,16 +129,19 @@ You MUST review ONLY the code that appears in this diff.
 - If a finding references code not present in the diff, it is out of scope — discard it.
 ```
 
-Use `model: sonnet` for all agents. The 6 agents to dispatch:
+The 9 agents to dispatch (note the model overrides — bug-finding agents use Opus for deeper reasoning):
 
-1. **jira-alignment** — `subagent_type: "deep-review:jira-alignment"` — Jira ticket vs implementation
-2. **bug-hunter** — `subagent_type: "deep-review:bug-hunter"` — logic errors, edge cases, security
-3. **architecture-patterns** — `subagent_type: "deep-review:architecture-patterns"` — framework misuse, pattern drift
-4. **over-engineering** — `subagent_type: "deep-review:over-engineering"` — unnecessary complexity
-5. **guidelines-compliance** — `subagent_type: "deep-review:guidelines-compliance"` — CLAUDE.md compliance
-6. **historical-context** — `subagent_type: "deep-review:historical-context"` — git blame, previous feedback
+1. **jira-alignment** — `subagent_type: "deep-review:jira-alignment"`, `model: sonnet` — Jira ticket vs implementation
+2. **logic-errors** — `subagent_type: "deep-review:logic-errors"`, `model: opus` — correctness bugs, data flow, null handling, resource leaks
+3. **edge-cases** — `subagent_type: "deep-review:edge-cases"`, `model: opus` — systematic branch enumeration, boundary conditions, unhandled inputs
+4. **security** — `subagent_type: "deep-review:security"`, `model: opus` — injection, auth bypass, data exposure, secrets
+5. **architecture-patterns** — `subagent_type: "deep-review:architecture-patterns"`, `model: sonnet` — framework misuse, pattern drift
+6. **over-engineering** — `subagent_type: "deep-review:over-engineering"`, `model: sonnet` — unnecessary complexity
+7. **guidelines-compliance** — `subagent_type: "deep-review:guidelines-compliance"`, `model: sonnet` — CLAUDE.md compliance
+8. **historical-context** — `subagent_type: "deep-review:historical-context"`, `model: sonnet` — git blame, previous feedback
+9. **test-coverage** — `subagent_type: "deep-review:test-coverage"`, `model: sonnet` — untested logic paths, missing error handling tests
 
-IMPORTANT: Launch all 6 agents in a SINGLE message with 6 parallel Agent tool calls. Do NOT launch them sequentially.
+IMPORTANT: Launch all 9 agents in a SINGLE message with 9 parallel Agent tool calls. Do NOT launch them sequentially.
 
 ## Step 6 — Synthesize Results
 
@@ -175,13 +178,18 @@ Compare against `previous_findings`:
 
 ### PR Mode — Inline Review Comments
 
+**Review decision**: choose the `event` based on findings severity:
+- `REQUEST_CHANGES` — when any **critical** finding with confidence >= 80 exists (security vulnerabilities, correctness bugs, breaking changes)
+- `COMMENT` — when only **important** or **suggestion** findings exist
+- `APPROVE` — when no findings remain after filtering (clean PR)
+
 Post a single review with all inline comments using `gh api`:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{number}/reviews \
   -X POST \
   -f commit_id=<FULL_40_CHAR_SHA> \
-  -f event=COMMENT \
+  -f event=<REQUEST_CHANGES|COMMENT|APPROVE> \
   -f body="<summary comment>" \
   -f 'comments[0][path]=file.py' \
   -f 'comments[0][line]=84' \
@@ -196,9 +204,24 @@ Evidence: explanation with code references or quotes.
 Confidence: N
 ```
 
-Categories map from agent categories: Bug, Architecture, Jira, Over-engineering, Guidelines, Historical.
+When the fix is unambiguous (e.g., wrong variable name, missing null check, incorrect condition), include a GitHub suggestion block so the author can apply it with one click:
 
-**Summary comment format:**
+````
+**[Category]** Description.
+
+Evidence: explanation with code references or quotes.
+Confidence: N
+
+```suggestion
+corrected code here
+```
+````
+
+Only include suggestion blocks when you are confident the fix is correct. Do not suggest fixes for architectural issues, design decisions, or problems that require broader context to resolve. The suggestion must be a drop-in replacement for the lines the comment is attached to.
+
+Categories map from agent categories: Logic, Edge Case, Security, Architecture, Jira, Over-engineering, Guidelines, Historical, Testing.
+
+**Summary comment format (REQUEST_CHANGES or COMMENT):**
 ```markdown
 ### Code Review
 
@@ -215,6 +238,17 @@ Critical:
 
 Important:
 3. Brief description — retry.py:30
+
+---
+Reviewed with deep-review · React with :+1: if useful, :-1: if not
+```
+
+**Approve summary (no findings):**
+```markdown
+### Code Review
+
+Reviewed N files (X deep, Y skimmed, Z skipped). LGTM.
+[Jira: PROJ-456 — all acceptance criteria addressed.]
 
 ---
 Reviewed with deep-review · React with :+1: if useful, :-1: if not
@@ -283,11 +317,12 @@ Print directly to the terminal:
 Reviewing N changed files against PROJ-456.
 
 ### Critical (X)
-1. [Bug] backend/services/doc_service.py:84 — Unhandled null return from get_document()
-2. [Architecture] backend/api/export/router.py:12-145 — Raw HTTP client; use existing ApiClient
+1. [Logic] backend/services/doc_service.py:84 — Unhandled null return from get_document()
+2. [Edge Case] backend/api/retry.py:42 — 429 status falls into non-retriable else branch
 
 ### Important (Y)
-3. [Over-engineering] backend/utils/retry.py — Custom retry logic; tenacity already used elsewhere
+3. [Architecture] backend/api/export/router.py:12-145 — Raw HTTP client; use existing ApiClient
+4. [Testing] backend/api/retry.py — New retry exhaustion path has no test coverage
 
 ### Jira Alignment
 - M/N acceptance criteria covered
