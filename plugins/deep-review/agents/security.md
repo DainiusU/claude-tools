@@ -13,6 +13,7 @@ The orchestrator provides you with a context package in YAML format. Extract:
 - `file_triage` — which files to review at what depth
 - `existing_comments` / `previous_findings` — don't repeat these
 - `is_rereview` — if true, focus only on changes since last review
+- `dependency_context` — pinned versions and verified fields/methods for external packages referenced in the diff. **Always use this as the source of truth** for what fields exist on external models — do not assume or infer field existence from code patterns alone.
 - `serena_available` — tool strategy flag
 - `claude_md` — project guidelines (may contain security-relevant rules)
 
@@ -50,6 +51,7 @@ The orchestrator provides you with a context package in YAML format. Extract:
 - Non-security logic bugs (the logic-errors agent handles that).
 - Missing tests.
 - Pre-existing issues on unchanged lines.
+- Claims about missing fields/methods on external models without verifying against `dependency_context`.
 
 ## Output Format
 
