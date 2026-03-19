@@ -57,13 +57,15 @@ Get the list of changed files from the diff. Classify each file:
 
 ## Step 4 — Build Context Package
 
-Assemble the context package as a YAML structure:
+Assemble the context package as a YAML structure.
+
+**IMPORTANT — Re-review diff scoping**: When `is_rereview` is true, the `diff` field MUST contain ONLY the scoped diff (`git diff <last_review_sha>..HEAD`), NOT the full PR diff. Include the COMPLETE scoped diff — do not abbreviate or summarize it. This is the sole input agents use to determine what changed; if you provide the full PR diff, agents will flag issues that were already reviewed.
 
 ```yaml
 context_package:
   mode: pr | local
   diff: |
-    <filtered diff — skip files excluded, skim files diff-only, deep files full diff>
+    <filtered diff — for re-reviews: ONLY the scoped diff (last_review_sha..HEAD), for fresh reviews: full PR diff with skip files excluded, skim files diff-only, deep files full diff>
   jira:
     ticket_id: PROJ-123 | ""
     summary: "..."
@@ -85,6 +87,8 @@ context_package:
   serena_memories: |
     <project conventions/patterns from Serena, or empty>
   is_rereview: true | false
+  re_review_scope: |
+    <for re-reviews only: "from_sha: <from_sha>, to_sha: <to_sha>". Empty for fresh reviews.>
   pr_description: "..."
   dependency_context: |
     <for each external/internal package referenced in the diff, include:
@@ -111,6 +115,18 @@ You are the [agent-name] reviewer. Review the following changes.
 \```
 
 <paste the full agent instructions from the agent's .md file>
+```
+
+**Re-review preamble** (MANDATORY for re-reviews — prepend to EVERY agent prompt when `is_rereview: true`):
+
+```
+CRITICAL — RE-REVIEW SCOPE CONSTRAINT:
+This is a re-review. The diff in the context package covers ONLY commits <from_sha>..<to_sha>.
+You MUST review ONLY the code that appears in this diff.
+- Do NOT flag issues about code that existed before <from_sha> — that was already reviewed.
+- Do NOT read old file versions or git history to find issues outside the scoped diff.
+- You may use Read/Grep/Glob to understand surrounding context, but every finding you report MUST be about code that changed in the provided diff.
+- If a finding references code not present in the diff, it is out of scope — discard it.
 ```
 
 The 9 agents to dispatch (note the model overrides — bug-finding agents use Opus for deeper reasoning):
@@ -147,10 +163,13 @@ For each remaining finding, assign a final confidence score (0-100) considering:
 ### 6d. Filter
 Remove findings with final confidence below 80.
 
-### 6e. Dedup Against Existing Comments
+### 6e. Re-review Scope Validation (if re-review)
+For each remaining finding, verify that the flagged code actually exists in the scoped diff (`from_sha..to_sha`). Discard any finding that describes code from before the review range — these are false positives from agents that read stale file versions.
+
+### 6f. Dedup Against Existing Comments
 Compare remaining findings against `existing_comments` from the PR — this includes both inline review comments and general PR comments (from other tools, bots, or reviewers). If a finding describes the same issue as an existing comment, remove it. Match on semantic similarity (same file + same concern), not exact text.
 
-### 6f. Re-review Reconciliation (if re-review)
+### 6g. Re-review Reconciliation (if re-review)
 Compare against `previous_findings`:
 - Mark previously flagged issues as: **resolved** (no longer present in diff), **still present** (same code, same issue), or **partially addressed** (changed but not fully fixed).
 - For PR mode: auto-resolve GitHub review threads for confirmed-resolved issues using the GraphQL mutation (see Step 7). Only resolve threads where: (a) the first comment's `author.login` matches the current user's login (fetch with `gh api /user -q .login`), and (b) the comment body contains `**[` (the deep-review category tag format).
