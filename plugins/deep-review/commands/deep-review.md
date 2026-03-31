@@ -161,7 +161,7 @@ For each remaining finding, assign a final confidence score (0-100) considering:
 - Whether the finding is actionable and specific
 
 ### 6d. Filter
-Remove findings with final confidence below 80.
+Remove findings with final confidence below 70.
 
 ### 6e. Re-review Scope Validation (if re-review)
 For each remaining finding, verify that the flagged code actually exists in the scoped diff (`from_sha..to_sha`). Discard any finding that describes code from before the review range — these are false positives from agents that read stale file versions.
@@ -336,7 +336,7 @@ If no issues found after filtering:
 ```
 ## Review Summary
 
-Reviewing N changed files. No issues found (confidence threshold: 80).
+Reviewing N changed files. No issues found (confidence threshold: 70).
 ```
 
 ## Edge Cases
@@ -357,4 +357,4 @@ Reviewing N changed files. No issues found (confidence threshold: 80).
 - Cite evidence for every finding.
 - Use `file:line` format for all code references.
 - In PR mode, all links must use the full 40-character SHA + line range: `https://github.com/{owner}/{repo}/blob/{FULL_SHA}/{path}#L{start}-L{end}`
-- Don't hedge — if confidence is 80+, state the issue directly.
+- Don't hedge — if confidence is 70+, state the issue directly.
