@@ -72,6 +72,7 @@ cover what needs to be atomic?
 - Style issues, naming conventions, missing docstrings.
 - Missing tests (that's not a bug).
 - Edge cases and boundary analysis (the edge-cases agent handles that).
+- Collection property assumptions — uniqueness, ordering, completeness (the edge-cases agent handles that).
 - Security vulnerabilities (the security agent handles that).
 - Issues that static analysis / type checkers would catch.
 - Pre-existing issues on unchanged lines.

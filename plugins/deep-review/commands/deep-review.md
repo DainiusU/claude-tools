@@ -163,39 +163,39 @@ For each remaining finding, assign a final confidence score (0-100) considering:
 ### 6d. Filter
 Remove findings with final confidence below 80.
 
-### 6e. Orchestrator Deep-dive
-
-Before outputting, review the combined agent findings for coverage gaps. You have
-the full diff — the agents don't see each other's work, but you see all of it.
-
-1. **Identify high-risk areas**: files with async/concurrent code, database
-   migrations, mechanism changes (A→B swaps), and any file flagged by 2+ agents.
-
-2. **Check for reasoning gaps**: for each high-risk area, ask: did any agent
-   apply the three core reasoning strategies — mechanism change analysis,
-   cancellation/cleanup tracing, runtime-vs-intent verification? If an area
-   is high-risk and none of these were applied, do the analysis yourself.
-
-3. **Targeted analysis only**: don't re-review the entire diff. Focus on the
-   areas where agent coverage is thin relative to the risk. Add any new findings
-   to the combined list with your own confidence scores.
-
-This step exists because individual agents reason in isolation. Cross-cutting
-issues — where a mutation in one function affects cleanup in another, or where
-a migration's index doesn't match the query that needs it — fall between agents.
-
-### 6f. Re-review Scope Validation (if re-review)
+### 6e. Re-review Scope Validation (if re-review)
 For each remaining finding, verify that the flagged code actually exists in the scoped diff (`from_sha..to_sha`). Discard any finding that describes code from before the review range — these are false positives from agents that read stale file versions.
 
-### 6g. Dedup Against Existing Comments
+### 6f. Dedup Against Existing Comments
 Compare remaining findings against `existing_comments` from the PR — this includes both inline review comments and general PR comments (from other tools, bots, or reviewers). If a finding describes the same issue as an existing comment, remove it. Match on semantic similarity (same file + same concern), not exact text.
 
-### 6h. Re-review Reconciliation (if re-review)
+### 6g. Re-review Reconciliation (if re-review)
 Compare against `previous_findings`:
 - Mark previously flagged issues as: **resolved** (no longer present in diff), **still present** (same code, same issue), or **partially addressed** (changed but not fully fixed).
-- For PR mode: auto-resolve GitHub review threads for confirmed-resolved issues using the GraphQL mutation (see Step 7). Only resolve threads where: (a) the first comment's `author.login` matches the current user's login (fetch with `gh api /user -q .login`), and (b) the comment body contains `**[` (the deep-review category tag format).
+- For PR mode: auto-resolve GitHub review threads for confirmed-resolved issues using the GraphQL mutation (see Step 8). Only resolve threads where: (a) the first comment's `author.login` matches the current user's login (fetch with `gh api /user -q .login`), and (b) the comment body contains `**[` (the deep-review category tag format).
 
-## Step 7 — Output
+## Step 7 — Orchestrator Deep-dive
+
+Individual agents reason in isolation. Cross-cutting issues — where a mutation in
+one function affects cleanup in another, or where a migration's index doesn't
+match the query that needs it — fall between agents. This step catches them.
+
+Scan the diff for high-risk areas and apply targeted analysis. Don't re-review
+the entire diff — focus only on areas where agent coverage is thin relative to
+the risk. Only add findings with confidence >= 80.
+
+| Risk signal in the diff | Analysis to perform |
+|---|---|
+| **Async/concurrent code** (gather, create_task, await in loops) | Cancellation/cleanup tracing: at each await, what is the state of every mutable shared reference if CancelledError fires? |
+| **Mechanism changes** (A→B swaps: query strategy, serialization format, sync→async) | Enumerate concrete inputs the old mechanism handled that the new one won't |
+| **Database migrations** (CREATE/DROP/ALTER, new indexes, new constraints) | Verify operation scope matches intent (some objects are database-global, not schema-scoped); verify new query patterns have index coverage |
+| **Batch/collection processing** (iterating external data, at-least-once sources) | Does the code assume uniqueness, ordering, or completeness the source doesn't guarantee? |
+| **New infrastructure** (new test files, new log calls, new config) | Does the new code follow project conventions for markers, log levels, config patterns per CLAUDE.md? |
+| **Files flagged by 2+ agents** | Re-read the flagged file's diff and check for issues that fall between the agents' scopes |
+
+Add any new findings to the combined list from Step 6, then apply the same 80-confidence floor.
+
+## Step 8 — Output
 
 ### PR Mode — Inline Review Comments
 

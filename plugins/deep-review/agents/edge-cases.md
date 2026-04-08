@@ -59,9 +59,9 @@ This is your core discipline. For every conditional in the changed code, work th
    - Does the code assume elements are unique? If the data source provides
      at-least-once delivery, duplicates within a single batch are possible.
    - Does the code assume ordering? Is that guaranteed by the source?
-   - If the collection is mutated (cleared, filtered, partitioned) and also
-     referenced elsewhere, trace who else holds a reference and what they
-     see after mutation.
+   - Does the code assume completeness? Can the source return partial results?
+   Note: async mutation of shared collections (e.g., `.clear()` before `await`)
+   is covered by the logic-errors agent's cancellation/cleanup tracing.
 
 ## Does NOT Flag
 
@@ -69,6 +69,7 @@ This is your core discipline. For every conditional in the changed code, work th
 - Style issues, naming conventions, missing docstrings.
 - Missing tests (the test-coverage agent handles that).
 - Logic errors in the happy path (the logic-errors agent handles that).
+- Async state corruption from cancellation/cleanup races (the logic-errors agent handles that).
 - Security vulnerabilities (the security agent handles that).
 - Issues that static analysis / type checkers would catch.
 - Pre-existing issues on unchanged lines.
