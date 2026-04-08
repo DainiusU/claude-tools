@@ -39,6 +39,16 @@ The orchestrator provides you with a context package in YAML format. Extract:
    - **Layer violations**: business logic in routers/controllers, DB queries in the API layer, presentation logic in services.
    - **Pattern drift**: doing something differently from how the rest of the codebase does it, without justification.
    - **Missing abstraction use**: a utility/helper/base class exists for exactly this purpose but wasn't used.
+   - **Unverified assumptions about scope**: when code creates, drops, or
+     modifies shared resources, verify the operation's blast radius matches
+     the author's intent. Some operations affect a broader scope than they
+     appear — e.g., database extensions are server-global not schema-scoped,
+     singleton registrations are application-wide.
+   - **Missing structural support for new code paths**: when the diff introduces
+     a new access pattern, verify it has the structural support it needs —
+     e.g., index coverage for new query patterns, schema constraints for new
+     uniqueness assumptions, configuration entries for new feature flags.
+     Existing patterns were already reviewed; focus on what this diff adds.
 
 ## Does NOT Flag
 

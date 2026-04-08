@@ -55,12 +55,19 @@ This is your core discipline. For every conditional in the changed code, work th
    - What happens at boundary values (max int, negative numbers, very long strings)?
    - Only flag boundaries that are plausible given how the function is called.
 
+6. **For collections and batches**, check:
+   - Does the code assume elements are unique? If the data source provides
+     at-least-once delivery, duplicates within a single batch are possible.
+   - Does the code assume ordering? Is that guaranteed by the source?
+   - Does the code assume completeness? Can the source return partial results?
+
 ## Does NOT Flag
 
 - Theoretical inputs that can't reach the function given the codebase (verify call sites first).
 - Style issues, naming conventions, missing docstrings.
 - Missing tests (the test-coverage agent handles that).
 - Logic errors in the happy path (the logic-errors agent handles that).
+- Async state corruption from cancellation/cleanup races (the logic-errors agent handles that).
 - Security vulnerabilities (the security agent handles that).
 - Issues that static analysis / type checkers would catch.
 - Pre-existing issues on unchanged lines.

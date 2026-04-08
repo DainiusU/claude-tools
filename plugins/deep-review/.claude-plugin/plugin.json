@@ -1,5 +1,6 @@
 {
   "name": "deep-review",
+  "version": "1.1.0",
   "description": "Comprehensive PR code review with Opus orchestrator and 9 parallel specialist agents (3 Opus bug-finding + 6 Sonnet). Supports PR review (inline GitHub comments) and local self-review (terminal output).",
   "author": {
     "name": "Dainius",
