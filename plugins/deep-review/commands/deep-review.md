@@ -7,7 +7,7 @@ model: opus
 
 You are a code review orchestrator. You coordinate 9 specialist review agents and synthesize their findings into a high-quality code review.
 
-## Step 1 — Detect Mode & Gather Inputs
+## Detect Mode & Gather Inputs
 
 Parse `$ARGUMENTS`:
 
@@ -25,7 +25,7 @@ Parse `$ARGUMENTS`:
 
 **Re-review detection** (PR mode only): fetch existing reviews via `gh api repos/{owner}/{repo}/pulls/{number}/reviews`. Search for a review body containing the signature string `Reviewed with deep-review`. If found, identify the commit SHA from the most recent such review (from its `commit_id` field). To scope the diff to only changes since the last review, use `git diff <last_review_sha>..HEAD` (not `gh pr diff`, which doesn't support range). If there are no commits after the last review SHA (i.e., HEAD equals the review's commit_id), output "No new changes since last review." and exit.
 
-## Step 2 — Fetch Context
+## Fetch Context
 
 Gather context from all available sources:
 
@@ -33,9 +33,9 @@ Gather context from all available sources:
 
 2. **CLAUDE.md files**: Use Glob to find `**/CLAUDE.md` in the repo root and in all directories containing modified files. Read each one.
 
-3. **Existing review comments** (PR mode): already fetched in Step 1.
+3. **Existing review comments** (PR mode): already fetched in Detect Mode.
 
-4. **CI status** (PR mode): extract from the `statusCheckRollup` field fetched in Step 1. Summarize as passing/failing/pending with failure details.
+4. **CI status** (PR mode): extract from the `statusCheckRollup` field fetched in Detect Mode. Summarize as passing/failing/pending with failure details.
 
 5. **Previous deep-review findings** (PR mode, re-review): if re-review detected, extract findings from the previous deep-review comment body.
 
@@ -43,7 +43,7 @@ Gather context from all available sources:
 
 7. **Dependency context** (when diff touches imports from internal/pinned packages): For each external or internal package newly imported or used in modified files, check the pinned version in `pyproject.toml`, `requirements.txt`, or `package.json`. Then verify the actual API surface at that version — for git-pinned dependencies, check the tag/commit on GitHub (e.g., `gh api repos/{owner}/{repo}/git/refs/tags/{tag}` and read the relevant source). For PyPI packages, check the installed version. Record the package name, pinned version, and relevant model/class fields that the diff references. This prevents agents from making incorrect assumptions about what fields or methods exist at the pinned version.
 
-## Step 3 — File Triage
+## File Triage
 
 Get the list of changed files from the diff. Classify each file:
 
@@ -55,7 +55,7 @@ Get the list of changed files from the diff. Classify each file:
 
 **Small diff shortcut**: if the total diff is < 5 files and < 200 lines, skip triage and mark everything as deep review.
 
-## Step 4 — Build Context Package
+## Build Context Package
 
 Assemble the context package as a YAML structure.
 
@@ -100,7 +100,7 @@ context_package:
      Leave empty if no external dependencies are touched in the diff.>
 ```
 
-## Step 5 — Dispatch 9 Parallel Agents
+## Dispatch 9 Parallel Agents
 
 Launch ALL 9 agents simultaneously using the Agent tool. Each agent receives the context package embedded in its prompt.
 
@@ -143,7 +143,7 @@ The 9 agents to dispatch (note the model overrides — bug-finding agents use Op
 
 IMPORTANT: Launch all 9 agents in a SINGLE message with 9 parallel Agent tool calls. Do NOT launch them sequentially.
 
-## Step 6 — Synthesize Results
+## Synthesize Results
 
 Process all agent findings:
 
@@ -172,9 +172,9 @@ Compare remaining findings against `existing_comments` from the PR — this incl
 ### 6g. Re-review Reconciliation (if re-review)
 Compare against `previous_findings`:
 - Mark previously flagged issues as: **resolved** (no longer present in diff), **still present** (same code, same issue), or **partially addressed** (changed but not fully fixed).
-- For PR mode: auto-resolve GitHub review threads for confirmed-resolved issues using the GraphQL mutation (see Step 8). Only resolve threads where: (a) the first comment's `author.login` matches the current user's login (fetch with `gh api /user -q .login`), and (b) the comment body contains `**[` (the deep-review category tag format).
+- For PR mode: auto-resolve GitHub review threads for confirmed-resolved issues using the GraphQL mutation (see Output). Only resolve threads where: (a) the first comment's `author.login` matches the current user's login (fetch with `gh api /user -q .login`), and (b) the comment body contains `**[` (the deep-review category tag format).
 
-## Step 7 — Orchestrator Deep-dive
+## Orchestrator Deep-dive
 
 Individual agents reason in isolation. Cross-cutting issues — where a mutation in
 one function affects cleanup in another, or where a migration's index doesn't
@@ -193,9 +193,9 @@ the risk. Only add findings with confidence >= 80.
 | **New infrastructure** (new test files, new log calls, new config) | Does the new code follow project conventions for markers, log levels, config patterns per CLAUDE.md? |
 | **Files flagged by 2+ agents** | Re-read the flagged file's diff and check for issues that fall between the agents' scopes |
 
-Add any new findings to the combined list from Step 6, then apply the same 80-confidence floor.
+Add any new findings to the combined list from Synthesize Results, then apply the same 80-confidence floor.
 
-## Step 8 — Output
+## Output
 
 ### PR Mode — Inline Review Comments
 

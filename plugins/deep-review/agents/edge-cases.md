@@ -60,8 +60,6 @@ This is your core discipline. For every conditional in the changed code, work th
      at-least-once delivery, duplicates within a single batch are possible.
    - Does the code assume ordering? Is that guaranteed by the source?
    - Does the code assume completeness? Can the source return partial results?
-   Note: async mutation of shared collections (e.g., `.clear()` before `await`)
-   is covered by the logic-errors agent's cancellation/cleanup tracing.
 
 ## Does NOT Flag
 

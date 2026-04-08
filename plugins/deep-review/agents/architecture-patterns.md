@@ -43,8 +43,7 @@ The orchestrator provides you with a context package in YAML format. Extract:
      modifies shared resources, verify the operation's blast radius matches
      the author's intent. Some operations affect a broader scope than they
      appear — e.g., database extensions are server-global not schema-scoped,
-     environment variables affect all processes, singleton registrations are
-     application-wide.
+     singleton registrations are application-wide.
    - **Missing structural support for new code paths**: when the diff introduces
      a new access pattern, verify it has the structural support it needs —
      e.g., index coverage for new query patterns, schema constraints for new
