@@ -27,7 +27,11 @@ The orchestrator provides you with a context package in YAML format. Extract:
 
 ## Process
 
-1. Read all CLAUDE.md content from the context package carefully. Identify actionable code rules (import patterns, naming conventions, error handling, type hints, architectural constraints, etc.).
+1. Read all CLAUDE.md content from the context package carefully. Identify actionable code rules (import patterns, naming conventions, error handling, type hints, architectural constraints, etc.). Also identify conventions for test infrastructure (markers, fixtures, conftest
+   patterns) and operational conventions (log levels, error reporting) that
+   CLAUDE.md defines. These are easy to miss because they apply to new files
+   rather than modified code — a new test file that lacks a required marker
+   violates the convention even though no existing line was changed.
 2. For each changed file:
    - Check the diff against each applicable CLAUDE.md rule.
    - For **deep-review files**: also read code comments in the modified file (using Serena or Read) — check if the changes violate guidance in those comments (e.g., "Do not modify this without updating X", "This must stay in sync with Y").

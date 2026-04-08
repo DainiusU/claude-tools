@@ -39,6 +39,16 @@ The orchestrator provides you with a context package in YAML format. Extract:
    - **Layer violations**: business logic in routers/controllers, DB queries in the API layer, presentation logic in services.
    - **Pattern drift**: doing something differently from how the rest of the codebase does it, without justification.
    - **Missing abstraction use**: a utility/helper/base class exists for exactly this purpose but wasn't used.
+   - **Unverified assumptions about scope**: when code creates or drops database
+     objects, verify the operation's blast radius matches the author's intent.
+     Some objects (extensions, roles, event triggers) are database-global, not
+     schema-scoped. Migration up/downgrade should not create or destroy objects
+     whose lifecycle extends beyond the migration's own scope.
+   - **Missing structural support for new code paths**: when the diff introduces
+     a new query pattern or data access path, verify it has the structural
+     support it needs — index coverage for new WHERE/JOIN clauses, schema
+     constraints for new uniqueness assumptions. Existing queries were already
+     reviewed; focus on what this diff adds.
 
 ## Does NOT Flag
 

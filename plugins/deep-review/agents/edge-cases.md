@@ -55,6 +55,14 @@ This is your core discipline. For every conditional in the changed code, work th
    - What happens at boundary values (max int, negative numbers, very long strings)?
    - Only flag boundaries that are plausible given how the function is called.
 
+6. **For collections and batches**, check:
+   - Does the code assume elements are unique? If the data source provides
+     at-least-once delivery, duplicates within a single batch are possible.
+   - Does the code assume ordering? Is that guaranteed by the source?
+   - If the collection is mutated (cleared, filtered, partitioned) and also
+     referenced elsewhere, trace who else holds a reference and what they
+     see after mutation.
+
 ## Does NOT Flag
 
 - Theoretical inputs that can't reach the function given the codebase (verify call sites first).

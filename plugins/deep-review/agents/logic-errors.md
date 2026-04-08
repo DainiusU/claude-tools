@@ -45,6 +45,27 @@ The orchestrator provides you with a context package in YAML format. Extract:
    - **State corruption**: partial updates that leave data inconsistent on failure.
    - **Wrong return values**: function returns incorrect data on specific paths (e.g., returning stale cursor after an error).
 
+## Reasoning Strategies
+
+Apply these when the diff contains the corresponding pattern:
+
+**Mechanism changes (A→B swaps):** When code replaces one approach with another
+(query strategy, serialization format, sync→async, ORM→raw SQL, etc.), enumerate
+concrete inputs the old mechanism handled that the new one won't. Focus on
+domain-relevant edge cases, not theoretical ones.
+
+**Cancellation and cleanup tracing:** For async code with gather/wait/create_task,
+walk forward through the function: at each `await`, what is the state of every
+mutable shared reference (lists, dicts, counters) if CancelledError fires? Does
+the cleanup/finally handler see consistent state? Pay special attention to
+in-place mutations (`.clear()`, `.pop()`, `del`) that happen before an await.
+
+**Runtime execution vs author intent:** Verify the code executes the way the
+author assumes. Does the query planner see the relation the author thinks it
+sees (views and CTEs don't inherit base table indexes)? Does the serializer
+preserve the properties the code depends on? Does the lock/transaction scope
+cover what needs to be atomic?
+
 ## Does NOT Flag
 
 - Theoretical issues that can't happen given the surrounding code (verify before flagging).
